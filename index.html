@@ -1,1 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raffle and Mint</title>
+<link href="https://fonts.googleapis.com/css?family=Lato:300&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lato';
+            background: linear-gradient(to right, #3498db, #8e44ad);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
 
+        .box {
+            text-align: center;
+            background: linear-gradient(to right, #00BCD4, #FFD700);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid white;
+            box-shadow: 8px 8px 8px rgba(255, 255, 255, 0.9);
+            margin-bottom: 20px; /* Add margin to create space between box and footer */
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        p {
+            color: #000;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        button {
+            font-size: 16px;
+            margin: 10px;
+            padding: 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: 2px solid white;
+            border-radius: 4px;
+            box-shadow: 0 4px 4px rgba(0, 0, 0, 0.9);
+            transition: background-color 0.3s, color 0.3s, border 0.3s;
+        }
+
+        button:active {
+            background-color: #45a049;
+            border: 2px solid black;
+            color: black;
+        }
+
+        button:hover {
+            background-color: #45a050;
+            border: 2px solid black;
+            color: black;
+        }
+
+        footer {
+            text-align: center;
+            width: 400px;
+            background: linear-gradient(45deg, #46466A, #6C7E91);
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            animation: fadeIn 1s ease-in;
+            animation-delay: 0.3s;
+            animation-fill-mode: forwards;
+        }
+
+        footer.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+/* Keyframe animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0; /* Start with 0 opacity (completely transparent) */
+    }
+    to {
+        opacity: 1; /* Fade in to full opacity */
+    }
+}
+
+@keyframes shadowPulse {
+    0%, 100% {
+        box-shadow: 10px 10px 10px rgba(0, 0, 0, 0.9); /* Initial and final shadow */
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.9); /* Midpoint shadow change */
+    }
+}
+
+/* Unvisited link */
+a {
+  color: #FF1493; /* Sand color for unvisited links */
+  text-decoration: none; /* Remove the default underline */
+}
+
+/* Visited link */
+a:visited {
+  color: #FF1493; /* Pine green color for visited links */
+}
+
+/* Hovered link */
+a:hover {
+  color: #004d43; /* Darker green color for links on hover */
+}
+
+/* Active link (clicked) */
+a:active {
+  color: #ffd700; /* Gold color for active (clicked) links */
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+</head>
+<body>
+
+<div class="box">
+    <h1>Raffle and Mint</h1>
+<p>This dApp connects to the <a href="https://scrollscan.com/token/0x0e4662F003B78aCEB928FB6C977Ba417c91403Bb#code" target="_blank">smart contract</a> on the Scroll chain.<br><br>It utilizes the Fisher-Yates shuffle algorithm to generate random numbers.<br><br>After connecting your wallet, click "Draw" to get the results.<br><br>You can mint without drawing, but it will execute with minting 0 tokens.</p>
+    <div class="buttons">
+        <button onclick="connectWallet()">Connect Wallet</button>
+        <button onclick="drawRaffle()">Draw Raffle</button>
+        <button onclick="showResult()">Show Result</button>
+        <button onclick="mintTokens()">Mint Tokens</button>
+    </div>
+<p>No costs involved besides used to run functions.<br>No rewards for participating in raffle<br>besides increased on-chain interactions.</p>
+</div>
+<div>
+<footer>
+     2023 delivered by <a href="https://twitter.com/jaqbek_eth" target="_blank">jaqbek</a>. All rights left.
+</footer>
+</div>
+<script>
+    let contractAddress = "0x0e4662F003B78aCEB928FB6C977Ba417c91403Bb";
+    let rpcEndpoint = "https://1rpc.io/scroll";
+    let abi = [
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "spender",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "value",
+        "type": "uint256"
+      }
+    ],
+    "name": "Approval",
+    "type": "event",
+    "signature": "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event",
+    "signature": "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "winner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "winningNumber",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "tokens",
+        "type": "uint256"
+      }
+    ],
+    "name": "RaffleWinner",
+    "type": "event",
+    "signature": "0xab7fbbf07edc3c3f08245bdc93b00c968864b0b22e5c042e062ed045a249a189"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "value",
+        "type": "uint256"
+      }
+    ],
+    "name": "Transfer",
+    "type": "event",
+    "signature": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "spender",
+        "type": "address"
+      }
+    ],
+    "name": "allowance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0xdd62ed3e"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "spender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "approve",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x095ea7b3"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "balanceOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0x70a08231"
+  },
+  {
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0x313ce567"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "spender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "subtractedValue",
+        "type": "uint256"
+      }
+    ],
+    "name": "decreaseAllowance",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0xa457c2d7"
+  },
+  {
+    "inputs": [],
+    "name": "drawRaffle",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x2275aea9"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "spender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "addedValue",
+        "type": "uint256"
+      }
+    ],
+    "name": "increaseAllowance",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x39509351"
+  },
+  {
+    "inputs": [],
+    "name": "mintTokens",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0xeeb9635c"
+  },
+  {
+    "inputs": [],
+    "name": "name",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0x06fdde03"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0x8da5cb5b"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x715018a6"
+  },
+  {
+    "inputs": [],
+    "name": "symbol",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0x95d89b41"
+  },
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0x18160ddd"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "transfer",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0xa9059cbb"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "transferFrom",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x23b872dd"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0xf2fde38b"
+  },
+  {
+    "inputs": [],
+    "name": "winningNumber",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true,
+    "signature": "0x4664611e"
+  }
+];
+    let contract;
+
+    let web3;
+    let accounts;
+
+async function connectWallet() {
+    if (window.ethereum) {
+        try {
+            // Request account access
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            web3 = new Web3(window.ethereum);
+            accounts = await web3.eth.getAccounts();
+
+            // Check the chain ID
+            const chainId = await web3.eth.getChainId();
+
+            if (chainId !== 0x82750) {
+                alert('Please switch to Scroll Mainnet (ID: 0x82750).');
+                return;
+            }
+
+            alert("Wallet connected");
+            // Initialize contract instance
+            contract = new web3.eth.Contract(abi, contractAddress);
+        } catch (error) {
+            alert(error);
+        }
+    } else {
+        alert("No Ethereum wallet detected");
+    }
+}
+
+    async function isRaffleDrawn() {
+        try {
+            const winningNumber = await contract.methods.winningNumber().call();
+            return winningNumber > 0;
+        } catch (error) {
+            console.error("Error checking if raffle is drawn:", error);
+            return false;
+        }
+    }
+
+    async function drawRaffle() {
+        try {
+            await contract.methods.drawRaffle().send({ from: accounts[0] });
+            alert("Raffle drawn");
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function mintTokens() {
+        try {
+            const winningNumber = await contract.methods.winningNumber().call();
+            const tokensToMint = winningNumber; // Use winningNumber as the number of tokens to be minted
+            
+            const confirmation = confirm(`Are you sure you want to mint ${tokensToMint} tokens?`);
+            if (confirmation) {
+                await contract.methods.mintTokens().send({ from: accounts[0] });
+                alert(`${tokensToMint} tokens minted`);
+            } else {
+                alert("Minting canceled by user");
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function showResult() {
+        try {
+            const winningNumber = await contract.methods.winningNumber().call();
+            alert("Winning Number: " + winningNumber);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+</script>
+</body>
+</html>
